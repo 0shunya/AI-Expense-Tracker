@@ -1,0 +1,31 @@
+# Render Blueprint for the API. The database is external (Neon recommended; see DEPLOYMENT.md).
+services:
+  - type: web
+    name: ai-expense-scanner-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: DEMO_ACCESS_CODE
+        sync: false
+      - key: STORAGE_BACKEND
+        value: database
+      - key: WORKER_MODE
+        value: inline
+      - key: DAILY_MODEL_CALL_LIMIT
+        value: "200"
+      - key: UPLOADS_PER_HOUR_PER_CLIENT
+        value: "20"
