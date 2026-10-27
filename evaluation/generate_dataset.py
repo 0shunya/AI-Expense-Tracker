@@ -13,7 +13,9 @@ from __future__ import annotations
 import io
 import json
 import random
+import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
@@ -95,12 +97,18 @@ class Spec:
     seed: int = 0
 
     # ---- computed ground truth -------------------------------------------------------------------
+    def compact(self, it: Item) -> bool:
+        """Single-quantity thermal lines are printed as 'description  amount' with no qty or unit price."""
+        return Decimal(it.qty) == 1 and self.layout == "thermal" and not it.discount
+
     def lines(self) -> list[dict]:
         out = []
         for it in self.items:
             qty, unit = Decimal(it.qty), Decimal(it.unit)
             total = Decimal(it.total) if it.total is not None else q(qty * unit - Decimal(it.discount or 0), self.currency)
-            out.append({"description": it.desc, "quantity": it.qty, "unit_price": it.unit,
+            printed = not self.compact(it)
+            out.append({"description": it.desc, "quantity": it.qty if printed else None,
+                        "unit_price": it.unit if printed else None,
                         "line_total": money(total, self.currency), "discount": it.discount})
         return out
 
@@ -151,6 +159,10 @@ def render_text_receipt(spec: Spec, rng: random.Random) -> list[Image.Image]:
         text = f"{d:,.{EXP.get(c, 2)}f}"
         return text
 
+    def unit_text(unit: str) -> str:
+        decimals = len(unit.split(".")[1]) if "." in unit else 0
+        return m(unit) if decimals <= EXP.get(c, 2) else unit  # e.g. fuel at 3.299/L keeps three decimals
+
     rows: list[tuple[str, str, str]] = []   # (style, left, right)
     if spec.merchant:
         rows.append(("title", spec.merchant.upper() if spec.layout == "thermal" else spec.merchant, ""))
@@ -168,12 +180,12 @@ def render_text_receipt(spec: Spec, rng: random.Random) -> list[Image.Image]:
     rows.append(("bold", "Item" if spec.layout != "thermal" else "ITEM", f"Amount ({c})" if spec.show_currency_code else "Amount"))
     for it, line in zip(spec.items, lines):
         qty = Decimal(it.qty)
-        if qty == 1 and spec.layout == "thermal" and not it.discount:
+        if spec.compact(it):
             rows.append(("text", it.desc, m(line["line_total"])))
         else:
             rows.append(("text", it.desc, ""))
             qty_text = it.qty if "." not in it.qty else f"{it.qty} L" if "fuel" in it.desc.lower() else it.qty
-            rows.append(("text", f"   {qty_text} x {m(it.unit) if Decimal(it.unit) >= 1 or EXP.get(c, 2) == 0 else it.unit}"
+            rows.append(("text", f"   {qty_text} x {unit_text(it.unit)}"
                                  + (f"  less {m(it.discount)}" if it.discount else ""), m(line["line_total"])))
     rows.append(("rule", "", ""))
     page_break = len(rows)
@@ -211,12 +223,16 @@ def render_text_receipt(spec: Spec, rng: random.Random) -> list[Image.Image]:
              "text": font(family, 24), "small": font(family, 18), "total": font(family + "b" if family != "serif" else "sansb", 30)}
     page_rows = [rows] if spec.pages == 1 else [rows[:page_break] + [("small", "Continued on page 2", "")], rows[page_break:]]
     images = []
+    spec.marks = {}
     for number, chunk in enumerate(page_rows, start=1):
         height = 90 + sum(sizes[s] + 14 for s, _, _ in chunk) + 60
         image = Image.new("RGB", (width, max(height, 500)), "#fdfcf8")
         draw = ImageDraw.Draw(image)
         y, margin = 45, 40
         for style, left, right in chunk:
+            if style == "total" or (style in ("text", "small") and any(k in left for k in ("Tax", "VAT", "GST", "HST", "MwSt", "IVA", "Incl."))):
+                key = "total" if style == "total" else "tax"
+                spec.marks.setdefault(key, y)
             if style == "rule":
                 draw.line((margin, y + 4, width - margin, y + 4), fill="#999999", width=1)
                 y += sizes["rule"] + 6
@@ -248,7 +264,8 @@ def render_not_receipt(spec: Spec) -> list[Image.Image]:
     return [image]
 
 
-def degrade(images: list[Image.Image], ops: list[str], rng: random.Random) -> list[Image.Image]:
+def degrade(images: list[Image.Image], ops: list[str], rng: random.Random, marks: dict | None = None) -> list[Image.Image]:
+    marks = marks or {}
     out = []
     for image in images:
         for op in ops:
@@ -267,7 +284,9 @@ def degrade(images: list[Image.Image], ops: list[str], rng: random.Random) -> li
                     x, y = rng.randrange(image.width), rng.randrange(image.height)
                     px[x, y] = (rng.randrange(80, 200),) * 3
             elif op == "crop_bottom":
-                image = image.crop((0, 0, image.width, int(image.height * 0.72)))
+                # Cut just above the first tax/total line so those values are genuinely not visible.
+                cut = min(marks.get("tax", image.height), marks.get("total", image.height)) - 8
+                image = image.crop((0, 0, image.width, max(cut, image.height // 3)))
             elif op == "shadow":
                 overlay = Image.new("L", image.size, 0)
                 d = ImageDraw.Draw(overlay)
@@ -276,8 +295,8 @@ def degrade(images: list[Image.Image], ops: list[str], rng: random.Random) -> li
                 image = Image.composite(Image.new("RGB", image.size, "#6b6355"), image, overlay)
             elif op == "smudge_total":
                 d = ImageDraw.Draw(image)
-                y = int(image.height * 0.70)
-                d.rectangle((image.width * 0.55, y - 10, image.width - 20, y + 120), fill="#5a5148")
+                y = marks.get("total", int(image.height * 0.7))
+                d.rectangle((image.width * 0.45, y - 8, image.width - 15, y + 46), fill="#5a5148")
         out.append(image)
     return out
 
@@ -285,7 +304,10 @@ def degrade(images: list[Image.Image], ops: list[str], rng: random.Random) -> li
 def encode(images: list[Image.Image], fmt: str) -> bytes:
     buffer = io.BytesIO()
     if fmt == "pdf":
-        images[0].save(buffer, format="PDF", save_all=True, append_images=images[1:], resolution=150)
+        # Fixed metadata timestamps keep the PDF bytes (and their SHA-256) reproducible.
+        stamp = time.gmtime(datetime(2026, 10, 27, tzinfo=timezone.utc).timestamp())
+        images[0].save(buffer, format="PDF", save_all=True, append_images=images[1:], resolution=150,
+                       creationDate=stamp, modDate=stamp)
     elif fmt == "png":
         images[0].save(buffer, format="PNG", optimize=True)
     else:
@@ -415,7 +437,7 @@ def specs() -> list[Spec]:
           expect_review=True, expect_flags=["total"]),
         S("r034", ["no_currency_code", "ambiguous_symbol"], "Harbour Bait & Tackle", "Wharf Rd", "AUD",
           [I("Squid bait", "2", "6.50"), I("Fishing line", "1", "14.90")],
-          "2026-01-08", "08/01/2026", tax_rate=None, show_currency_code=False, reference="HBT-108",
+          "2026-01-08", "08/01/2026", tax_rate=None, show_currency_code=False, reference="HBT-108", hidden_fields=["currency"],
           date_any_of=["2026-01-08", "2026-08-01"], expect_review=True, expect_flags=["currency", "date"]),
 
         # --- ambiguous values -----------------------------------------------------------------------
@@ -495,6 +517,21 @@ def specs() -> list[Spec]:
     return out
 
 
+def apply_ambiguous_date_rule(spec: Spec) -> None:
+    """Dataset rule: a numeric date whose first two parts are both <= 12 and differ is ambiguous. Both readings
+    are accepted for accuracy, and the system is expected to flag the date. Applied mechanically to every spec."""
+    import re as _re
+    match = _re.search(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b", spec.date_printed or "")
+    if not match or not spec.date_iso:
+        return
+    a, b = int(match.group(1)), int(match.group(2))
+    if a <= 12 and b <= 12 and a != b:
+        y, m, d = spec.date_iso.split("-")
+        spec.date_any_of = sorted({spec.date_iso, f"{y}-{d}-{m}"})
+        if "date" not in spec.expect_flags:
+            spec.expect_flags = [*spec.expect_flags, "date"]
+
+
 def main() -> None:
     FILES.mkdir(parents=True, exist_ok=True)
     rendered: dict[str, bytes] = {}
@@ -505,10 +542,11 @@ def main() -> None:
             data = rendered[spec.duplicate_of]
         else:
             images = render_not_receipt(spec) if spec.not_receipt else render_text_receipt(spec, rng)
-            data = encode(degrade(images, spec.degrade, rng), spec.fmt)
+            data = encode(degrade(images, spec.degrade, rng, getattr(spec, "marks", {})), spec.fmt)
         rendered[spec.id] = data
         name = f"{spec.id}.{spec.fmt}"
         (FILES / name).write_bytes(data)
+        apply_ambiguous_date_rule(spec)
         gt = None if spec.not_receipt else spec.ground_truth()
         hard = {"missing_date", "missing_merchant", "missing_total", "unreadable", "smudged_total", "ambiguous_date",
                 "planted_wrong_total", "line_mismatch", "refund", "not_receipt", "probable_duplicate", "cropped", "ambiguous_symbol"}

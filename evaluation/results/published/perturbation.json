@@ -1,0 +1,38 @@
+{
+  "by_kind": {
+    "currency: wrong valid code": {
+      "caught": 0,
+      "of": 43
+    },
+    "date: day off by one": {
+      "caught": 0,
+      "of": 33
+    },
+    "date: year +1 (future)": {
+      "caught": 33,
+      "of": 33
+    },
+    "line total: one wrong digit": {
+      "caught": 43,
+      "of": 44
+    },
+    "subtotal: one wrong digit": {
+      "caught": 43,
+      "of": 43
+    },
+    "tax: one wrong digit": {
+      "caught": 21,
+      "of": 31
+    },
+    "total: one wrong digit": {
+      "caught": 44,
+      "of": 44
+    },
+    "total: two digits swapped": {
+      "caught": 44,
+      "of": 44
+    }
+  },
+  "caught": 228,
+  "total": 315
+}

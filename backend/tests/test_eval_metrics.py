@@ -88,3 +88,19 @@ def test_manifest_is_consistent():
         if r["expected"]["duplicate_of"]:
             assert r["expected"]["duplicate_of"] in ids[: ids.index(r["id"])]
     assert json.dumps(rows).count("planted_wrong_total") >= 3
+
+
+def test_perturbations_and_flagging():
+    from perturbation import bump_digit, flagged, perturbations, transpose
+    from app.services.uncertainty import assess
+    from app.services.receipt_data import from_extraction
+    from app.services.validation import validate
+    from app.llm.gateway import parse_reply
+    from tests.factories import reply
+
+    assert bump_digit("13.23") == "13.33" and transpose("13.23") == "31.23"
+    kinds = {k for k, _, _ in perturbations(reply())}
+    assert {"total: one wrong digit", "tax: one wrong digit", "date: day off by one"} <= kinds
+    wrong = next(r for k, _, r in perturbations(reply()) if k == "total: one wrong digit")
+    data = from_extraction(parse_reply(json.dumps(wrong))[0])
+    assert flagged("total", assess(data, validate(data)))

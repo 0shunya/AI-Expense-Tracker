@@ -7,8 +7,7 @@ import { api } from "../lib/api";
 import { formatMinor, formatMonth, formatMs, relativeTime, titleCase } from "../lib/format";
 import type { Activity, Dashboard as DashboardData } from "../lib/types";
 
-function MonthlyBars({ data }: { data: DashboardData["monthly_approved"] }) {
-  const currencies = [...new Set(data.map((d) => d.currency))];
+function MonthlyBars({ data, currencies }: { data: DashboardData["monthly_approved"]; currencies: string[] }) {
   if (!data.length) return <p className="text-ink-2">Approved expenses will be summarised here by month.</p>;
   return (
     <div className="space-y-5">
@@ -17,7 +16,7 @@ function MonthlyBars({ data }: { data: DashboardData["monthly_approved"] }) {
         const max = Math.max(...rows.map((r) => Math.abs(r.total_minor)), 1);
         return (
           <div key={currency}>
-            {currencies.length > 1 && <p className="mb-2 text-xs font-medium text-ink-2">{currency}</p>}
+            <p className="mb-2 text-xs font-medium text-ink-2">{currency} by month</p>
             <ul className="space-y-1.5">
               {rows.map((r) => (
                 <li key={r.month} className="grid grid-cols-[72px_1fr_auto] items-center gap-3 text-[13px]">
@@ -91,16 +90,23 @@ export default function Dashboard() {
             <p className="text-ink-2">No approved expenses yet. Spending appears here only after a receipt is approved.</p>
           ) : (
             <div className="grid gap-6 md:grid-cols-[minmax(0,220px)_1fr]">
-              <dl className="space-y-4">
-                {d.approved_spend.map((s) => (
-                  <div key={s.currency}>
-                    <dt className="text-xs font-medium text-ink-2">{s.currency} · this month</dt>
-                    <dd className="num text-2xl font-semibold tracking-tight">{formatMinor(s.this_month_minor, s.currency)}</dd>
-                    <dd className="num text-xs text-ink-3">{formatMinor(s.all_time_minor, s.currency)} all time · {s.count} receipt{s.count === 1 ? "" : "s"}</dd>
-                  </div>
-                ))}
-              </dl>
-              <MonthlyBars data={d.monthly_approved} />
+              <div>
+                <dl className="space-y-4">
+                  {d.approved_spend.slice(0, 4).map((s) => (
+                    <div key={s.currency}>
+                      <dt className="text-xs font-medium text-ink-2">{s.currency} · {s.count} receipt{s.count === 1 ? "" : "s"}</dt>
+                      <dd className="num text-2xl font-semibold tracking-tight">{formatMinor(s.all_time_minor, s.currency)}</dd>
+                      <dd className="num text-xs text-ink-3">{formatMinor(s.this_month_minor, s.currency)} this month</dd>
+                    </div>
+                  ))}
+                </dl>
+                {d.approved_spend.length > 4 && (
+                  <Link to="/expenses" className="mt-3 inline-block text-[13px] text-accent hover:underline">
+                    +{d.approved_spend.length - 4} more currencies
+                  </Link>
+                )}
+              </div>
+              <MonthlyBars data={d.monthly_approved} currencies={d.approved_spend.slice(0, 2).map((x) => x.currency)} />
             </div>
           )}
           {d && d.pending_review_totals.length > 0 && (

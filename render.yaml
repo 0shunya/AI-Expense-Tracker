@@ -16,7 +16,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-3.5-flash
+        value: gemini-3.5-flash-lite
       - key: FRONTEND_ORIGIN
         sync: false
       - key: DEMO_ACCESS_CODE

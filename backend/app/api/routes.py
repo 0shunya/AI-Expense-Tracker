@@ -315,13 +315,14 @@ def dashboard(db: Session = Depends(get_db)):
     activity = [{"kind": "decision", "decision": d.decision, "receipt_id": str(d.receipt_id),
                  "label": merchant or filename, "note": d.note, "at": d.created_at}
                 for d, merchant, filename in recent_decisions]
+    decided = {a["receipt_id"] for a in activity}
     activity += [{"kind": "receipt", "status": r.status, "receipt_id": str(r.id), "label": r.merchant or r.original_filename,
-                  "at": r.updated_at} for r in recent_receipts]
+                  "at": r.updated_at} for r in recent_receipts if str(r.id) not in decided]
     activity.sort(key=lambda a: a["at"], reverse=True)
     return {
         "counts": {st.value: int(counts.get(st.value, 0)) for st in ReceiptStatus},
         "total_receipts": int(sum(counts.values())),
-        "approved_spend": [{"currency": c, **v} for c, v in sorted(approved.items())],
+        "approved_spend": [{"currency": c, **v} for c, v in sorted(approved.items(), key=lambda kv: (-kv[1]["count"], kv[0]))],
         "pending_review_totals": [{"currency": c, "total_minor": int(t or 0), "count": n} for c, t, n in pending],
         "monthly_approved": [{"month": m, "currency": c, "total_minor": v} for (m, c), v in sorted(monthly.items())][-24:],
         "recent_activity": activity[:10],

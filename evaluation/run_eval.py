@@ -136,7 +136,9 @@ def report(meta: dict, m: dict, records: list[dict]) -> str:
         f"- Model: `{meta['model']}` · prompt `{meta['prompt_version']}` · passes {meta['passes']} · mode **{meta['mode']}**",
         f"- Dataset: {m['documents']} documents ({m['receipts_with_ground_truth']} labelled receipts, 1 non-receipt, "
         f"{m['documents'] - m['scored_documents']} exact duplicates) · manifest sha256 `{meta['manifest_sha256'][:12]}`",
-        f"- Git commit: `{meta['git_sha']}` · started {meta['started_at']}", "",
+        f"- Git commit: `{meta['git_sha']}` · started {meta['started_at']}",
+        *([f"- Model outputs were recorded live in run `{meta['source_run']}` and re-scored here without new calls."]
+          if meta.get("source_run") else []), "",
         "Synthetic, rendered receipts (see `evaluation/dataset/README.md`). Treat these numbers as performance on clean "
         "printed receipts with planted difficulties, not as real-world photo accuracy.", "",
         "## Schema validity vs. correctness", "",
@@ -161,6 +163,7 @@ def report(meta: dict, m: dict, records: list[dict]) -> str:
         f"| Receipts with a wrong key field sent to review | {pct(u['receipts_with_any_wrong_key_field_sent_to_review'])} |",
         f"| Receipt-level review detection P / R / F1 | {pct(u['receipt_review_detection']['precision'])} / "
         f"{pct(u['receipt_review_detection']['recall'])} / {pct(u['receipt_review_detection']['f1'])} |", "",
+        *small_sample_notes(m), "",
         "## Duplicate detection", "", "| Kind | Precision | Recall |", "|---|---|---|",
         *[f"| {k} | {pct(v['precision'])} | {pct(v['recall'])} |" for k, v in m["duplicates"].items()], "",
         "## Latency and tokens (first pass, successful calls)", "",
@@ -172,7 +175,7 @@ def report(meta: dict, m: dict, records: list[dict]) -> str:
     from metrics import field_correct, is_flagged
     rows = []
     for r in records:
-        if not r["truth"]:
+        if not r["truth"] or r["expected"]["duplicate_kind"] == "exact":  # never sent to the model
             continue
         for name in KEY_FIELDS:
             if not field_correct(name, r["values"].get(name), r["truth"]):
@@ -180,6 +183,15 @@ def report(meta: dict, m: dict, records: list[dict]) -> str:
                             f"{'yes' if is_flagged(name, r['statuses'].get(name)) else '**no**'} |")
     lines += (["| Case | Field | Truth | Predicted | Flagged |", "|---|---|---|---|---|", *rows] if rows else ["None."])
     return "\n".join(lines) + "\n"
+
+
+def small_sample_notes(m: dict) -> list[str]:
+    notes = []
+    for label, entry in (("Flag recall", m["uncertainty"]["flag_recall_on_wrong_values"]),
+                         ("Planted-error catch rate", m["reconciliation"]["planted_discrepancies_caught"])):
+        if entry["of"] and entry["of"] < 10:
+            notes.append(f"> **Small sample:** {label} is computed from only {entry['of']} case(s); it is not a reliable estimate.")
+    return ["", *notes] if notes else []
 
 
 def main() -> int:
@@ -193,6 +205,7 @@ def main() -> int:
     parser.add_argument("--min-interval", type=float, default=0.0,
                         help="seconds between call starts, to stay under a per-minute quota (e.g. 8 for ~7 RPM)")
     parser.add_argument("--resume", type=Path, help="run directory to continue: keeps successful outputs, retries the rest")
+    parser.add_argument("--rerun", default="", help="with --resume: comma-separated ids to call again (e.g. after a file changed)")
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
 
@@ -226,6 +239,7 @@ def main() -> int:
         raws = {row["id"]: row for row in map(json.loads, args.replay.read_text(encoding="utf-8").splitlines())}
         saved = json.loads((args.replay.parent / "results.json").read_text(encoding="utf-8"))["meta"]
         model, passes, mode = saved["model"], saved["passes"], "replay"
+        source_run = saved.get("source_run") or saved["run_id"]
     else:
         if not settings.gemini_api_key:
             print("GEMINI_API_KEY is not set: live evaluation cannot run. Nothing was measured.", file=sys.stderr)
@@ -233,11 +247,12 @@ def main() -> int:
         provider = build_provider(settings)
         gateway = ModelGateway(provider, calls.append, max_attempts=4)
         model, passes, mode = settings.gemini_model, args.passes, "live"
+        source_run = None
         raws = {}
         raw_path = out / "raw_outputs.jsonl"
         if args.resume and raw_path.exists():
             for row in map(json.loads, raw_path.read_text(encoding="utf-8").splitlines()):
-                if row["passes"][0]["ok"]:
+                if row["passes"][0]["ok"] and row["id"] not in set(filter(None, args.rerun.split(","))):
                     raws[row["id"]] = row
         pending = [c for c in to_call if c["id"] not in raws]
         print(f"Calling {model} on {len(pending)} documents ({len(raws)} already done, "
@@ -282,7 +297,7 @@ def main() -> int:
     meta = {"run_id": run_id, "mode": mode, "model": model, "prompt_version": PROMPT_VERSION, "passes": passes,
             "started_at": started.isoformat(timespec="seconds"), "git_sha": git_sha, "as_of": AS_OF.isoformat(),
             "manifest_sha256": hashlib.sha256(args.manifest.read_bytes()).hexdigest(),
-            "gateway_calls": len(calls), "gateway_call_errors": _errors(calls)}
+            "gateway_calls": len(calls), "gateway_call_errors": _errors(calls), "source_run": source_run}
     (out / "results.json").write_text(json.dumps({"meta": meta, "metrics": metrics}, indent=2, default=str), encoding="utf-8")
     with (out / "cases.jsonl").open("w", encoding="utf-8") as fh:
         for r in records:

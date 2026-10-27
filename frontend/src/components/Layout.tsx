@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Activity, ClipboardCheck, LayoutDashboard, Menu, ReceiptText, Upload, WalletCards, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router";
+import { useState } from "react";
+import { NavLink, Outlet } from "react-router";
 import { api } from "../lib/api";
 import { cx } from "./ui";
 
@@ -63,8 +63,6 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function Layout() {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
-  useEffect(() => setOpen(false), [location.pathname]);
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[232px_1fr]">

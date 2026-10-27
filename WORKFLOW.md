@@ -326,7 +326,11 @@ whole extraction (fields, lines, checks, status) commits, or the lease expires a
   gives 100 % to perfect output) reports schema validity separately from correctness: per-field accuracy, line-item
   P/R/F1, exact-match receipts, reconciliation pass rate and planted-error catch rate, flag recall and review load,
   receipt-level review detection, duplicate precision/recall, latency and tokens.
-* Results: `evaluation/results/published/report.md` and `results.json`.
+* `perturbation.py` takes recorded, correct model outputs, injects one realistic misread at a time (wrong digit,
+  swapped digits, wrong line amount, shifted date, swapped currency) and measures how often the validators flag it.
+  It tests the rules, not the model, at a meaningful sample size, because the live run produced too few wrong values.
+* Results: `evaluation/results/published/report.md`, `results.json`, `perturbation.md`. A replayed report names the
+  live run its model outputs came from, and rates computed on fewer than 10 cases are marked as small samples.
 
 ## 16. Local development
 

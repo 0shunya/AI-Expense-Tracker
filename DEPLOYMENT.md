@@ -39,7 +39,7 @@ Target architecture (the simplest one that fits the code as written):
 | `APP_ENV` | yes | `production` | Disables `/docs`, enables JSON logs |
 | `DATABASE_URL` | yes | `postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require` | `postgres://` and `postgresql://` are rewritten to the psycopg driver |
 | `GEMINI_API_KEY` | yes | — | Secret. Never put it in the frontend |
-| `GEMINI_MODEL` | no | `gemini-3.5-flash` | Any vision model your key can use (`/api/health` shows the active one) |
+| `GEMINI_MODEL` | no | `gemini-3.5-flash-lite` | Any vision model your key can use (`/api/health` shows the active one) |
 | `FRONTEND_ORIGIN` | yes | `https://your-app.vercel.app` | Exact origin(s), comma-separated, no trailing slash. Drives CORS |
 | `DEMO_ACCESS_CODE` | recommended | a long random string | When set, every API call needs the code (entered once in the browser) |
 | `STORAGE_BACKEND` | no | `database` | Keep `database` on Render: its disk is wiped on every deploy |
@@ -84,7 +84,7 @@ Start command is the image's `CMD` (`./start.sh`): migrate, then `uvicorn` on `$
 When the deploy is live, open `https://<service>.onrender.com/api/health`. Expected:
 
 ```json
-{"status": "ok", "database": "ok", "environment": "production", "gemini_configured": true, "model": "gemini-3.5-flash", ...}
+{"status": "ok", "database": "ok", "environment": "production", "gemini_configured": true, "model": "gemini-3.5-flash-lite", ...}
 ```
 
 `database: "unavailable"` (HTTP 503) means `DATABASE_URL` is wrong or the database is unreachable.

@@ -1,0 +1,194 @@
+{
+  "meta": {
+    "run_id": "20261027T193420Z",
+    "mode": "replay",
+    "model": "gemini-3.5-flash-lite",
+    "prompt_version": "receipt-extract-v1",
+    "passes": 1,
+    "started_at": "2026-10-27T19:34:20+00:00",
+    "git_sha": "c484d33",
+    "as_of": "2026-10-27",
+    "manifest_sha256": "0c90b8f151bf4da4c4cc6f6ead95864b9d3ecac6919bed1d9478962352f444f9",
+    "gateway_calls": 0,
+    "gateway_call_errors": {},
+    "source_run": "20261027T192259Z"
+  },
+  "metrics": {
+    "documents": 56,
+    "scored_documents": 53,
+    "receipts_with_ground_truth": 52,
+    "extraction": {
+      "model_calls_attempted": 53,
+      "schema_valid_rate": {
+        "value": 1.0,
+        "n": 53,
+        "of": 53
+      },
+      "failure_rate": {
+        "value": 0.0,
+        "n": 0,
+        "of": 53
+      },
+      "failures_by_category": {}
+    },
+    "field_accuracy": {
+      "merchant": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "date": {
+        "value": 0.9807692307692307,
+        "n": 51,
+        "of": 52
+      },
+      "currency": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "subtotal": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "tax": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "total": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "tip": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "discount": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "service_charge": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      },
+      "transaction_reference": {
+        "value": 1.0,
+        "n": 52,
+        "of": 52
+      }
+    },
+    "key_field_accuracy_micro": {
+      "value": 0.9967948717948718,
+      "n": 311,
+      "of": 312
+    },
+    "line_items": {
+      "tp": 147,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "matched_lines_with_correct_qty_and_unit": {
+        "value": 0.9659863945578231,
+        "n": 142,
+        "of": 147
+      }
+    },
+    "exact_match_receipt_accuracy": {
+      "value": 0.9807692307692307,
+      "n": 51,
+      "of": 52
+    },
+    "reconciliation": {
+      "pass_rate_on_predictions": {
+        "value": 0.94,
+        "n": 47,
+        "of": 50
+      },
+      "planted_discrepancies_caught": {
+        "value": 1.0,
+        "n": 3,
+        "of": 3
+      },
+      "false_alarms_on_consistent_receipts": {
+        "value": 0.0,
+        "n": 0,
+        "of": 47
+      }
+    },
+    "uncertainty": {
+      "flag_recall_on_wrong_values": {
+        "value": 1.0,
+        "n": 1,
+        "of": 1
+      },
+      "review_load_on_correct_values": {
+        "value": 0.08681672025723473,
+        "n": 27,
+        "of": 311
+      },
+      "designed_hard_fields_flagged": {
+        "value": 0.88,
+        "n": 22,
+        "of": 25
+      },
+      "receipt_review_detection": {
+        "tp": 24,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.96,
+        "recall": 1.0,
+        "f1": 0.9795918367346939
+      },
+      "receipts_with_any_wrong_key_field_sent_to_review": {
+        "value": 1.0,
+        "n": 1,
+        "of": 1
+      }
+    },
+    "duplicates": {
+      "exact": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "probable": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "any": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "latency_ms": {
+      "n": 53,
+      "p50": 3650.0,
+      "p95": 4990.0,
+      "mean": 3850.566037735849
+    },
+    "tokens": {
+      "calls_reporting_usage": 53,
+      "mean_input": 1570.5849056603774,
+      "mean_output": 772.5471698113207
+    }
+  }
+}

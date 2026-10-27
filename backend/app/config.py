@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Gemini (server-side only)
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-3.5-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"
     gemini_thinking_level: Literal["minimal", "low", "medium", "high", "off"] = "low"
     model_timeout_seconds: float = Field(default=90, ge=5, le=300)
     model_max_attempts: int = Field(default=3, ge=1, le=5)
