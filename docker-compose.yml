@@ -1,0 +1,38 @@
+# Local development database (default) and an optional containerised backend:
+#   docker compose up -d db                 # just PostgreSQL on localhost:5433
+#   docker compose --profile app up --build # PostgreSQL + API (http://localhost:8000)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scanner
+      POSTGRES_PASSWORD: scanner
+      POSTGRES_DB: scanner
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scanner -d scanner"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    profiles: ["app"]
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://scanner:scanner@db:5432/scanner
+      FRONTEND_ORIGIN: http://localhost:5173
+      STORAGE_BACKEND: database
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
