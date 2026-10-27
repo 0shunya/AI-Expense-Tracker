@@ -25,7 +25,25 @@ export function FlagSummary({ receipt }: { receipt: ReceiptSummary }) {
 export default function ReceiptTable({ receipts, compact = false }: { receipts: ReceiptSummary[]; compact?: boolean }) {
   const navigate = useNavigate();
   return (
-    <div className="overflow-x-auto">
+    <>
+    <ul className="divide-y divide-line sm:hidden">
+      {receipts.map((r) => (
+        <li key={r.id}>
+          <Link to={`/receipts/${r.id}`} className="block px-4 py-3 hover:bg-canvas">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className={cx("truncate font-medium", !r.merchant && "text-ink-2 italic")}>{r.merchant ?? r.original_filename}</span>
+              <span className="num shrink-0 font-medium">{formatMinor(r.total_minor, r.currency)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-3 text-xs text-ink-2">
+              <span className="num">{formatDate(r.receipt_date)}</span>
+              <StatusBadge status={r.status} approvedBy={r.approved_by} />
+            </div>
+            {!compact && <div className="mt-1 line-clamp-2"><FlagSummary receipt={r} /></div>}
+          </Link>
+        </li>
+      ))}
+    </ul>
+    <div className="hidden overflow-x-auto sm:block">
       <table className="w-full min-w-[640px] text-left">
         <thead className="border-b border-line bg-canvas text-xs font-medium text-ink-2">
           <tr>
@@ -58,5 +76,6 @@ export default function ReceiptTable({ receipts, compact = false }: { receipts: 
         </tbody>
       </table>
     </div>
+    </>
   );
 }

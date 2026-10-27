@@ -62,6 +62,10 @@ def _retry_after(details: object) -> float | None:
 
 def classify_status(code: int | None, message: str, details: object = None) -> ProviderError:
     text = (message or "")[:200]
+    if code == 429 and "PerDay" in json.dumps(details, default=str) + text:
+        # A daily quota will not recover within any sensible backoff: fail fast instead of burning retries.
+        return ProviderError("quota_exhausted", "The daily Gemini quota for this key and model is used up.",
+                             retryable=False, status_code=code)
     if code == 429:
         return ProviderError("rate_limited", f"Rate limited or quota exhausted: {text}", retryable=True,
                              status_code=code, retry_after=_retry_after(details))

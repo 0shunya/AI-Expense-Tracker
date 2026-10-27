@@ -136,3 +136,14 @@ def test_request_contains_schema_and_all_pages():
     assert len(request.pages) == 2 and "2 page" in request.user_text
     assert "total" in request.response_schema["properties"]
     assert "confidence" not in json.dumps(request.response_schema).lower()
+
+
+def test_daily_quota_429_is_not_retried():
+    details = {"error": {"details": [{"violations": [{"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]},
+                                     {"retryDelay": "42021s"}]}}
+    error = classify_status(429, "You exceeded your current quota", details)
+    assert error.category == "quota_exhausted" and not error.retryable
+    gateway, calls, _ = make_gateway(scripted(error, response()))
+    with pytest.raises(ExtractionFailed):
+        gateway.extract_receipt(PAGES)
+    assert len(calls) == 1

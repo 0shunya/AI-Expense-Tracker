@@ -192,6 +192,7 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--min-interval", type=float, default=0.0,
                         help="seconds between call starts, to stay under a per-minute quota (e.g. 8 for ~7 RPM)")
+    parser.add_argument("--resume", type=Path, help="run directory to continue: keeps successful outputs, retries the rest")
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
 
@@ -205,7 +206,9 @@ def main() -> int:
     cases = load_manifest(args.manifest)[: args.limit]
     dataset_dir = args.manifest.parent
     started = datetime.now(timezone.utc)
-    run_id = started.strftime("%Y%m%dT%H%M%SZ")
+    run_id = args.resume.name if args.resume else started.strftime("%Y%m%dT%H%M%SZ")
+    out = HERE / "results" / "runs" / run_id
+    out.mkdir(parents=True, exist_ok=True)
     calls: list[CallRecord] = []
 
     # Exact duplicates are caught by SHA-256 before any model call, exactly as at upload time.
@@ -231,7 +234,15 @@ def main() -> int:
         gateway = ModelGateway(provider, calls.append, max_attempts=4)
         model, passes, mode = settings.gemini_model, args.passes, "live"
         raws = {}
-        print(f"Calling {model} on {len(to_call)} documents ({len(cases) - len(to_call)} exact duplicates skipped)…", flush=True)
+        raw_path = out / "raw_outputs.jsonl"
+        if args.resume and raw_path.exists():
+            for row in map(json.loads, raw_path.read_text(encoding="utf-8").splitlines()):
+                if row["passes"][0]["ok"]:
+                    raws[row["id"]] = row
+        pending = [c for c in to_call if c["id"] not in raws]
+        print(f"Calling {model} on {len(pending)} documents ({len(raws)} already done, "
+              f"{len(cases) - len(to_call)} exact duplicates skipped)…", flush=True)
+        write_lock = threading.Lock()
         pacing = threading.Lock()
         last = [0.0]
 
@@ -241,13 +252,17 @@ def main() -> int:
                 if wait > 0:
                     time.sleep(wait)
                 last[0] = time.monotonic()
-            return extract_live(case, gateway, dataset_dir, passes)
+            result = extract_live(case, gateway, dataset_dir, passes)
+            with write_lock:  # append as we go, so an interrupted run keeps what it paid for
+                with raw_path.open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(result, ensure_ascii=False) + "\n")
+            return result
 
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
-            for done, result in enumerate(pool.map(paced, to_call), start=1):
+            for done, result in enumerate(pool.map(paced, pending), start=1):
                 raws[result["id"]] = result
                 p = result["passes"][0]
-                print(f"  [{done:02d}/{len(to_call)}] {result['id']}: {'ok' if p['ok'] else p['error_category']} {p['latency_ms']} ms", flush=True)
+                print(f"  [{done:02d}/{len(pending)}] {result['id']}: {'ok' if p['ok'] else p['error_category']} {p['latency_ms']} ms", flush=True)
 
     prior_keys: list = []
     records = []
@@ -268,8 +283,6 @@ def main() -> int:
             "started_at": started.isoformat(timespec="seconds"), "git_sha": git_sha, "as_of": AS_OF.isoformat(),
             "manifest_sha256": hashlib.sha256(args.manifest.read_bytes()).hexdigest(),
             "gateway_calls": len(calls), "gateway_call_errors": _errors(calls)}
-    out = HERE / "results" / "runs" / run_id
-    out.mkdir(parents=True, exist_ok=True)
     (out / "results.json").write_text(json.dumps({"meta": meta, "metrics": metrics}, indent=2, default=str), encoding="utf-8")
     with (out / "cases.jsonl").open("w", encoding="utf-8") as fh:
         for r in records:
