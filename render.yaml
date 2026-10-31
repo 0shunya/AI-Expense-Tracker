@@ -26,6 +26,6 @@ services:
       - key: WORKER_MODE
         value: inline
       - key: DAILY_MODEL_CALL_LIMIT
-        value: "200"
+        value: "15"  # free-tier key: ~20 requests/day per model; keep headroom
       - key: UPLOADS_PER_HOUR_PER_CLIENT
         value: "20"

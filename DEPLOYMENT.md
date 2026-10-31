@@ -44,7 +44,7 @@ Target architecture (the simplest one that fits the code as written):
 | `DEMO_ACCESS_CODE` | recommended | a long random string | When set, every API call needs the code (entered once in the browser) |
 | `STORAGE_BACKEND` | no | `database` | Keep `database` on Render: its disk is wiped on every deploy |
 | `WORKER_MODE` | no | `inline` | `off` only if you run `python -m app.worker` as a separate service |
-| `DAILY_MODEL_CALL_LIMIT` | no | `200` | Hard stop on Gemini calls per UTC day (wallet guard) |
+| `DAILY_MODEL_CALL_LIMIT` | no | `15` | Hard stop on Gemini calls per UTC day (wallet guard) |
 | `UPLOADS_PER_HOUR_PER_CLIENT` | no | `20` | Per-IP upload rate limit (in-process) |
 | `MAX_UPLOAD_MB` / `MAX_PDF_PAGES` | no | `10` / `5` | Upload limits |
 | `AUTO_APPROVE_CLEAN_RECEIPTS` | no | `false` | `true` = receipts with zero flags skip review (labelled "Auto-approved") |
