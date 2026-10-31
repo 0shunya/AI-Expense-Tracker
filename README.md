@@ -7,7 +7,11 @@ highlighted with the reason, and a person fixes or confirms it in one action bef
 > **Schema-valid is not correct.** Structured output guarantees the shape of the JSON, not the truth of the
 > numbers. This project measures how often the model is wrong and how often the rules catch it.
 
-**Live demo:** not deployed yet (see [DEPLOYMENT.md](DEPLOYMENT.md)). **Evaluation:** 99.7% (311/312) key-field accuracy and validators that caught 44/44 injected total misreads — on a synthetic 56-document set with `gemini-3.5-flash-lite` ([report](evaluation/results/published/report.md)).
+[![Watch the 70-second demo](docs/demo-poster.jpg)](docs/demo.mp4)
+
+▶ [Watch the 70-second demo](docs/demo.mp4)
+
+**Live demo:** [ai-expense-tracker-eta-sandy.vercel.app](https://ai-expense-tracker-eta-sandy.vercel.app) (access code required; see [DEPLOYMENT.md](DEPLOYMENT.md)). **Evaluation:** 99.7% (311/312) key-field accuracy and validators that caught 44/44 injected total misreads — on a synthetic 56-document set with `gemini-3.5-flash-lite` ([report](evaluation/results/published/report.md)).
 
 | Measured on 56 synthetic documents · `gemini-3.5-flash-lite` · prompt `receipt-extract-v1` | Result |
 |---|---|
