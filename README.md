@@ -7,9 +7,7 @@ highlighted with the reason, and a person fixes or confirms it in one action bef
 > **Schema-valid is not correct.** Structured output guarantees the shape of the JSON, not the truth of the
 > numbers. This project measures how often the model is wrong and how often the rules catch it.
 
-[![Watch the 70-second demo](docs/demo-poster.jpg)](docs/demo.mp4)
-
-▶ [Watch the 70-second demo](docs/demo.mp4)
+https://github.com/user-attachments/assets/f3f0a3f4-3272-4b0f-8416-ccfafc7c9118
 
 **Live demo:** [ai-expense-tracker-eta-sandy.vercel.app](https://ai-expense-tracker-eta-sandy.vercel.app) (access code required; see [DEPLOYMENT.md](DEPLOYMENT.md)). **Evaluation:** 99.7% (311/312) key-field accuracy and validators that caught 44/44 injected total misreads — on a synthetic 56-document set with `gemini-3.5-flash-lite` ([report](evaluation/results/published/report.md)).
 
