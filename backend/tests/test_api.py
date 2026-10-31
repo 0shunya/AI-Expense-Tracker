@@ -291,6 +291,24 @@ def test_access_code_gate(client, settings_override):
         assert gated.get("/api/receipts", headers={"X-Access-Code": "letmein"}).status_code == 200
 
 
+def test_access_code_rejection_is_readable_cross_origin(client, settings_override):
+    """Regression: the 401 must carry CORS headers, or a browser on another origin sees only a network error
+    and never shows the access-code screen."""
+    from app.main import create_app
+    from fastapi.testclient import TestClient
+
+    origin = "https://frontend.example"
+    settings_override(demo_access_code="letmein", frontend_origin=origin)
+    with TestClient(create_app(start_worker=False)) as gated:
+        denied = gated.get("/api/receipts", headers={"Origin": origin})
+        assert denied.status_code == 401
+        assert denied.headers.get("access-control-allow-origin") == origin
+        too_big = gated.post("/api/receipts", headers={"Origin": origin, "X-Access-Code": "letmein",
+                                                       "Content-Length": str(500 * 1024 * 1024)}, content=b"x")
+        assert too_big.status_code == 413
+        assert too_big.headers.get("access-control-allow-origin") == origin
+
+
 def test_upload_rate_limit(client, settings_override):
     settings_override(uploads_per_hour_per_client="2")
     assert upload(client, image_bytes(text="1")).status_code == 202

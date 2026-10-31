@@ -44,10 +44,6 @@ def create_app(start_worker: bool | None = None) -> FastAPI:
     app = FastAPI(title="AI Expense Scanner API", version=__version__, lifespan=lifespan,
                   docs_url="/docs" if settings.app_env != "production" else None)
     install_error_handlers(app)
-    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False,
-                       allow_methods=["GET", "POST", "PATCH", "PUT"],
-                       allow_headers=["Content-Type", "Idempotency-Key", "X-Access-Code", "X-Request-Id"],
-                       expose_headers=["X-Request-Id", "Content-Disposition"], max_age=600)
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
@@ -74,6 +70,13 @@ def create_app(start_worker: bool | None = None) -> FastAPI:
                                        "status": response.status_code,
                                        "duration_ms": round((time.perf_counter() - started) * 1000)})
         return response
+
+    # Added last so it is the outermost layer: responses produced by request_context itself (401 access code,
+    # 413 too large) must carry CORS headers too, or the browser hides them as a generic network error.
+    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False,
+                       allow_methods=["GET", "POST", "PATCH", "PUT"],
+                       allow_headers=["Content-Type", "Idempotency-Key", "X-Access-Code", "X-Request-Id"],
+                       expose_headers=["X-Request-Id", "Content-Disposition"], max_age=600)
 
     app.include_router(router)
 
