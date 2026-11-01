@@ -9,6 +9,8 @@ highlighted with the reason, and a person fixes or confirms it in one action bef
 
 https://github.com/user-attachments/assets/f3f0a3f4-3272-4b0f-8416-ccfafc7c9118
 
+▶ Video not playing (for example in the GitHub mobile app)? [Watch the 70-second demo](https://github.com/user-attachments/assets/f3f0a3f4-3272-4b0f-8416-ccfafc7c9118)
+
 **Live demo:** [ai-expense-tracker-eta-sandy.vercel.app](https://ai-expense-tracker-eta-sandy.vercel.app) (access code required; see [DEPLOYMENT.md](DEPLOYMENT.md)). **Evaluation:** 99.7% (311/312) key-field accuracy and validators that caught 44/44 injected total misreads — on a synthetic 56-document set with `gemini-3.5-flash-lite` ([report](evaluation/results/published/report.md)).
 
 | Measured on 56 synthetic documents · `gemini-3.5-flash-lite` · prompt `receipt-extract-v1` | Result |
